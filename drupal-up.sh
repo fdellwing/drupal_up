@@ -1,10 +1,10 @@
 #!/bin/bash
-################################################################
-###       Script für (halb)automatische Drupal Updates       ###
-###           Autor: Fabian Dellwing, Stephan Sauer          ###
-###                    Datum: 26.07.2016                     ###
-###             Kontakt: f.dellwing@netfutura.de             ###
-################################################################
+######################################################
+###  Script für (halb)automatische Drupal Updates  ###
+###             Autor: Fabian Dellwing             ###
+###               Datum: 26.07.2016                ###
+###        Kontakt: f.dellwing@netfutura.de        ###
+######################################################
 
 MY_PATH=$(dirname "$0") # relative
 MY_PATH=$(cd "$MY_PATH" && pwd) # absolutized and normalized
@@ -50,7 +50,7 @@ elif [ -z "$2" ]; then
 			DB_LIST=true
 		else # nein!
 			MY_DB_NAME="drupal_""$1"
-			MY_DB_NAME=$(echo "$MY_DB_NAME" | tr \- \_)
+			MY_DB_NAME=$(echo "$MY_DB_NAME" | tr "\-" "\_")
 			DB_LIST=false
 		fi
 		
@@ -152,7 +152,7 @@ elif [ -z "$2" ]; then
 					DB_LIST=false
 				else # standard db shema: drupal_ordner
 					MY_DB_NAME="drupal_""$drupal"
-					MY_DB_NAME=$(echo "$MY_DB_NAME" | tr \- \_)
+					MY_DB_NAME=$(echo "$MY_DB_NAME" | tr "\-" "\_")
 					DB_LIST=false
 				fi
 			fi
