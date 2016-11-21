@@ -44,7 +44,7 @@ elif [ -z "$2" ]; then
 
 	if [ "$LIST" = false ]; then # für einen ordner
 	
-		SITECOUNT=$(ls -l /var/www/"$1"/sites/ | grep -c ^d)
+		SITECOUNT=$(find ./* -maxdepth 0 -type d | wc -l)
 		if [ "$SITECOUNT" -gt 2 ]; then # ist es ein multisite setup?
 			IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/"$1"/sites/*/settings.php ) )
 			DB_LIST=true
@@ -139,7 +139,7 @@ elif [ -z "$2" ]; then
 		echo "----------------------"
 		for drupal in "${drupale[@]}"
 			do
-			SITECOUNT=$(ls -l /var/www/"$drupal"/sites/ | grep -c ^d)
+			SITECOUNT=$(find ./* -maxdepth 0 -type d | wc -l)
 			if [ "$SITECOUNT" -gt 2 ]; then # ist es multisite?
 				IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/"$drupal"/sites/*/settings.php ) )
 				DB_LIST=true
