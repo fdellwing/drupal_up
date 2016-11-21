@@ -6,14 +6,14 @@
 ###             Kontakt: f.dellwing@netfutura.de             ###
 ################################################################
 
-MY_PATH="`dirname \"$0\"`" # relative
-MY_PATH="`( cd \"$MY_PATH\" && pwd )`" # absolutized and normalized
+MY_PATH=$(dirname "$0") # relative
+MY_PATH=$(cd "$MY_PATH" && pwd) # absolutized and normalized
 if [ -z "$MY_PATH" ] ; then
 	# error; for some reason, the path is not accessible
 	# to the script (e.g. permissions re-evaled after suid)
 	exit 1  # fail
 fi
-cd "$MY_PATH"
+cd "$MY_PATH" || exit 1
 
 if [ -z "$1" ]; then
     # display usage if no parameters given
@@ -29,9 +29,9 @@ elif [ -z "$2" ]; then
 	if [ -d "$WWW_PATH""$1" ]; then # ist der angegebene parameter ein ordner?
 		LIST=false
 	else # nein!
-		if [ -e $1 ]; then # ist es eine datei?
+		if [ -e "$1" ]; then # ist es eine datei?
 			# Liest die angegebene Datei in das Array drupale
-			IFS=$'\n' drupale=( $( cat $1 ) )
+			IFS=$'\n' drupale=( $( cat "$1" ) )
 			LIST=true
 		else # nein!
 			echo "----------------------"
@@ -44,20 +44,20 @@ elif [ -z "$2" ]; then
 
 	if [ "$LIST" = false ]; then # für einen ordner
 	
-		SITECOUNT=`ls -l /var/www/$1/sites/ | grep -c ^d`
-		if [ $SITECOUNT -gt 2 ]; then # ist es ein multisite setup?
-			IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/$1/sites/*/settings.php ) )
+		SITECOUNT=$(ls -l /var/www/"$1"/sites/ | grep -c ^d)
+		if [ "$SITECOUNT" -gt 2 ]; then # ist es ein multisite setup?
+			IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/"$1"/sites/*/settings.php ) )
 			DB_LIST=true
 		else # nein!
 			MY_DB_NAME="drupal_""$1"
-			MY_DB_NAME=`echo "$MY_DB_NAME" | tr \- \_`
+			MY_DB_NAME=$(echo "$MY_DB_NAME" | tr \- \_)
 			DB_LIST=false
 		fi
 		
 		TMP_PATH="$WWW_PATH""$1" # wir gehen in den drupal ordner
-		cd "$TMP_PATH"
+		cd "$TMP_PATH" || exit 1
 		echo "----------------------"
-		echo 'Starte Updateroutine für '$1'.'
+		echo 'Starte Updateroutine für '"$1"'.'
 		echo "----------------------"
 		drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus setzen
 		drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
@@ -69,13 +69,13 @@ elif [ -z "$2" ]; then
 		echo "----------------------"
 		CONF="/etc/mysql/debian.cnf" # mysql config einlesen
 		if [ "$DB_LIST" = true ]; then # multisite?
-			for db in ${datenbanken[@]}
+			for db in "${datenbanken[@]}"
 				do
 				db=${db#*\'}
 				db=${db#*\'}
 				db=${db#*\'}
 				db=${db%%\'*} # datenbank name 
-				mysqldump --defaults-extra-file=$CONF --add-drop-table $db > /root/drupal_update_db_back/$db"_"$(date +"%m_%d_%Y").sql 2>> /var/log/drupal-mysql.log # sql file erstellen
+				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > /root/drupal_update_db_back/"$db""_""$(date +'%m_%d_%Y')".sql 2>> /var/log/drupal-mysql.log # sql file erstellen
 				if [ "$?" -eq 0 ]; then # fehlerfrei?
 					echo "----------------------"
 					echo "Datenbank Sicherung erfolgreich erstellt."
@@ -90,7 +90,7 @@ elif [ -z "$2" ]; then
 				fi
 			done
 		else # nein!
-			mysqldump --defaults-extra-file=$CONF --add-drop-table $MY_DB_NAME > /root/drupal_update_db_back/$MY_DB_NAME"_"$(date +"%m_%d_%Y").sql 2>> /var/log/drupal-mysql.log #sql file erstellen
+			mysqldump --defaults-extra-file="$CONF" --add-drop-table "$MY_DB_NAME" > /root/drupal_update_db_back/"$MY_DB_NAME""_""$(date +'%m_%d_%Y')".sql 2>> /var/log/drupal-mysql.log #sql file erstellen
 			if [ "$?" -eq 0 ]; then # fehlerfrei?
 				echo "----------------------"
 				echo "Datenbank Sicherung erfolgreich erstellt."
@@ -121,9 +121,9 @@ elif [ -z "$2" ]; then
 		
 		date > /var/log/drupal-up-error.log # logdatei leeren
 		grep error /var/log/drupal-up.log >> /var/log/drupal-up-error.log # nur fehler ausgeben
-		LINECOUNT=`wc -l /var/log/drupal-up-error.log` # fehlerzahl lesen
+		LINECOUNT=$(wc -l /var/log/drupal-up-error.log) # fehlerzahl lesen
 		LINECOUNT=${LINECOUNT%% *}
-		if [ $LINECOUNT -gt 1 ]; then # haben wir fehler?
+		if [ "$LINECOUNT" -gt 1 ]; then # haben wir fehler?
 			echo "----------------------"
 			echo 'Seite(n) aus dem Wartungsmodus genommen, bitte Webseite überprüfen.'
 			echo 'Es sind Fehler aufgetreten, bitte unter "/var/log/drupal-up-error.log" nachschauen.'
@@ -137,11 +137,11 @@ elif [ -z "$2" ]; then
 		echo "----------------------"
 		echo 'Starte Updateroutinen für '${#drupale[@]}' Einträge.'
 		echo "----------------------"
-		for drupal in ${drupale[@]}
+		for drupal in "${drupale[@]}"
 			do
-			SITECOUNT=`ls -l /var/www/$drupal/sites/ | grep -c ^d`
-			if [ $SITECOUNT -gt 2 ]; then # ist es multisite?
-				IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/$drupal/sites/*/settings.php ) )
+			SITECOUNT=$(ls -l /var/www/"$drupal"/sites/ | grep -c ^d)
+			if [ "$SITECOUNT" -gt 2 ]; then # ist es multisite?
+				IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/"$drupal"/sites/*/settings.php ) )
 				DB_LIST=true
 			else # nein!
 				if [ "$drupal" = "schnellfein" ]; then # hardcoded ausnahme
@@ -152,15 +152,15 @@ elif [ -z "$2" ]; then
 					DB_LIST=false
 				else # standard db shema: drupal_ordner
 					MY_DB_NAME="drupal_""$drupal"
-					MY_DB_NAME=`echo "$MY_DB_NAME" | tr \- \_`
+					MY_DB_NAME=$(echo "$MY_DB_NAME" | tr \- \_)
 					DB_LIST=false
 				fi
 			fi
 			
 			TMP_PATH="$WWW_PATH""$drupal"
-			cd "$TMP_PATH" # ins drupal verzeichnis wechseln
+			cd "$TMP_PATH" || exit 1 # ins drupal verzeichnis wechseln
 			echo "----------------------"
-			echo 'Starte Updateroutine für '$drupal'.'
+			echo 'Starte Updateroutine für '"$drupal"'.'
 			echo "----------------------"
 			drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus setzen
 			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
@@ -172,13 +172,13 @@ elif [ -z "$2" ]; then
 			echo "----------------------"
 			CONF="/etc/mysql/debian.cnf"
 			if [ "$DB_LIST" = true ]; then # multisite?
-				for db in ${datenbanken[@]}
+				for db in "${datenbanken[@]}"
 					do
 					db=${db#*\'}
 					db=${db#*\'}
 					db=${db#*\'}
 					db=${db%%\'*} # db name 
-					mysqldump --defaults-extra-file=$CONF --add-drop-table $db > /root/drupal_update_db_back/$db"_"$(date +"%m_%d_%Y").sql 2>> /var/log/drupal-mysql.log # datenbank sichern
+					mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > /root/drupal_update_db_back/"$db""_""$(date +'%m_%d_%Y')".sql 2>> /var/log/drupal-mysql.log # datenbank sichern
 					if [ "$?" -eq 0 ]; then # fehlerfrei?
 						echo "----------------------"
 						echo "Datenbank Sicherung erfolgreich erstellt."
@@ -193,7 +193,7 @@ elif [ -z "$2" ]; then
 					fi
 				done
 			else # nein!
-				mysqldump --defaults-extra-file=$CONF --add-drop-table $MY_DB_NAME > /root/drupal_update_db_back/$MY_DB_NAME"_"$(date +"%m_%d_%Y").sql 2>> /var/log/drupal-mysql.log # datenbank sichern
+				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$MY_DB_NAME" > /root/drupal_update_db_back/"$MY_DB_NAME""_""$(date +'%m_%d_%Y')".sql 2>> /var/log/drupal-mysql.log # datenbank sichern
 				if [ "$?" -eq 0 ]; then # fehlerfrei ?
 					echo "----------------------"
 					echo "Datenbank Sicherung erfolgreich erstellt."
@@ -228,9 +228,9 @@ elif [ -z "$2" ]; then
 		
 		date > /var/log/drupal-up-error.log # log leeren
 		grep error /var/log/drupal-up.log >> /var/log/drupal-up-error.log # nur fehler schreiben
-		LINECOUNT=`wc -l /var/log/drupal-up-error.log` # fehler zählen
+		LINECOUNT=$(wc -l /var/log/drupal-up-error.log) # fehler zählen
 		LINECOUNT=${LINECOUNT%% *}
-		if [ $LINECOUNT -gt 1 ]; then # mehr als 1 fehler?
+		if [ "$LINECOUNT" -gt 1 ]; then # mehr als 1 fehler?
 			echo "----------------------"
 			echo 'Sämtliche Updateroutinen beendet.'
 			echo 'Es sind Fehler aufgetreten, bitte unter "/var/log/drupal-up-error.log" nachschauen.'
