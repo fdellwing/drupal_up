@@ -6,38 +6,66 @@
 ###        Contact: f.dellwing@netfutura.de        ###
 ######################################################
 
-WWW_PATH="/var/www/" # you may edit this if ur www path is different
-CONF="/etc/mysql/debian.cnf" # mysql config einlesen
+######################################################
+###   You max edit this values if they differ on   ###
+###                  your system.                  ###
+######################################################
 
+# The root path for your drupal installations
+WWW_PATH="/var/www/"
+
+# Your systems MYSQL user settings
+# If you do not use a debian based system,
+# the file has to look like this:
+# [client]                                                                                                                                                                                                                                     
+# host     = localhost                                                                                                                                                                                                                         
+# user     = debian-sys-maint                                                                                                                                                                                                                  
+# password = passphrase                                                                                                                                                                                                                  
+# socket   = /var/run/mysqld/mysqld.sock
+CONF="/etc/mysql/debian.cnf"
+
+######################################################
+###          The main script starts here.          ###
+######################################################
+
+# Display usage if no parameters are given
 if [ -z "$1" ]; then
-    # display usage if no parameters given
-    echo "Usage: ./drupal-up.sh <folder or list>"
-    echo "Instead of a folder, you can provide a list with folder names"
+    echo "Usage: ./drupal-up.sh <foldername or file>"
+    echo "Instead of a foldername, you can provide a file with foldernames"
+# Run the program if exactly one parameter is given
 elif [ -z "$2" ]; then
-	date >| /var/log/drupal-mysql.log # clear logfile
-	date >| /var/log/drupal-up.log # clear logfile
-	if [ -d "$WWW_PATH""$1" ]; then # is the given parameter a directory?
+	# Clear the logfiles from previous run
+	date >| /var/log/drupal-mysql.log
+	date >| /var/log/drupal-up.log
+	# Check if the given parameter is a directory in WWW_PATH
+	if [ -d "$WWW_PATH""$1" ]; then
 		LIST=false
-	else # no!
-		if [ -e "$1" ]; then # is it a file?
-			# Liest die angegebene Datei in das Array drupale
+	else
+		# If not, is it a file?
+		if [ -e "$1" ]; then
+			# Creates an array from the input file
 			IFS=$'\n' drupale=( $( cat "$1" ) )
 			LIST=true
-		else # no!
+		else
+		# If not, exit the script
 			echo "----------------------"
 			echo 'The given parameter is no existing directory or file.'
 			echo "----------------------"
-			exit 1 # script beenden
+			exit 1
 		fi
 	fi
-	if [ "$LIST" = false ]; then # für einen ordner
+	# Run the routine for a single folder
+	if [ "$LIST" = false ]; then
+		# Get the databases from the drupal settings
 		IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" "$WWW_PATH""$1"/sites/*/settings.php ) )
-		TMP_PATH="$WWW_PATH""$1" # wir gehen in den drupal ordner
+		TMP_PATH="$WWW_PATH""$1"
 		cd "$TMP_PATH" || exit 1
 		echo "----------------------"
 		echo 'Starting update for '"$1"'.'
 		echo "----------------------"
-		drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus setzen
+		# Set maintenance mode
+		drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
+		# Clear the cache to make sure we are in maintenance
 		drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
 		echo "----------------------"
 		echo 'Site(s) moved to maintenance mode.'
@@ -47,67 +75,86 @@ elif [ -z "$2" ]; then
 		echo "----------------------"
 		# shellcheck disable=SC2034
 		i=1
+		# Create the DB backups
 		for db in "${datenbanken[@]}"
 			do
+			# Get that variable in the right form
 			db=${db#*\'}
 			db=${db#*\'}
 			db=${db#*\'}
-			db=${db%%\'*} # datenbank name 
+			db=${db%%\'*}
+			# Dump the database in in self contained file
 			mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > /root/drupal_update_db_back/"$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log # sql file erstellen
 			# shellcheck disable=SC2181
-			if [ "$?" -eq 0 ]; then # fehlerfrei?
+			# If the command fails, we need to stop or we can harm our drupal permanently
+			if [ "$?" -eq 0 ]; then
 				echo "----------------------"
 				echo 'Database backup successfully created ('"$i"'/'"${#datenbanken[@]}"').'
 				echo "----------------------"
-			else # nein!
+			else
 				echo "----------------------"
 				echo 'Error while creating the database backup, please check the logfile "/var/log/drupal-mysql.log".'
 				echo "----------------------"
-				drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus entfernen
-				drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
-				exit 1 # script beenden
+				# Unset maintenance mode
+				drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+				# Clear the cache to make sure we are not in maintenance
+				drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+				# If you are here, please read the log, because there is something wrong
+				exit 1
 			fi
 			((i++))
 		done
 		echo "----------------------"
 		echo 'Starting update of drupal.'
 		echo "----------------------"
-		drush @sites up -y >> /dev/null 2>> /var/log/drupal-up.log # drupal update
+		# Do the drupal update
+		drush @sites up -y >> /dev/null 2>> /var/log/drupal-up.log
 		echo "----------------------"
 		echo 'Finishing update of drupal.'
 		echo "----------------------"
-		drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log # drupal updatedb
-		chown -R 33:33 "$TMP_PATH" # alles www-data geben
-		drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus entfernen
-		drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
-		date >| /var/log/drupal-up-error.log # logdatei leeren
-		grep error /var/log/drupal-up.log >> /var/log/drupal-up-error.log # nur fehler ausgeben
-		LINECOUNT=$(wc -l /var/log/drupal-up-error.log) # fehlerzahl lesen
+		# To be sure, do a DB update
+		drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log
+		# Set the correct owner (33=www-data)
+		chown -R 33:33 "$TMP_PATH"
+		# Unset maintenance mode
+		drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+		# Clear the cache to make sure we are not in maintenance
+		drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+		# Clear error log from previous run
+		date >| /var/log/drupal-up-error.log
+		# Put all the errors from the log to the error log
+		grep error /var/log/drupal-up.log >> /var/log/drupal-up-error.log
+		# Count the lines in error log >1 = there are errors
+		LINECOUNT=$(wc -l /var/log/drupal-up-error.log)
 		LINECOUNT=${LINECOUNT%% *}
-		if [ "$LINECOUNT" -gt 1 ]; then # haben wir fehler?
+		if [ "$LINECOUNT" -gt 1 ]; then
 			echo "----------------------"
 			echo 'Site(s) moved out of maintenance mode, please check the website(s).'
 			echo 'There are some errors, please check the logfile "/var/log/drupal-up-error.log"'
 			echo "----------------------"
-		else # nein!
+		else
 			echo "----------------------"
 			echo 'Site(s) moved out of maintenance mode, please check the website(s).'
 			echo "----------------------"
 		fi
-	else # für mehrere ordner
+	# Run the routine for multiple drupal installations
+	else
 		echo "----------------------"
 		echo 'Starting update for '"${#drupale[@]}"' entries.'
 		echo "----------------------"
 		for drupal in "${drupale[@]}"
 			do
+			# Get the databases from the drupal settings
 			IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/"$drupal"/sites/*/settings.php ) )
 			TMP_PATH="$WWW_PATH""$drupal"
-			cd "$TMP_PATH" || exit 1 # ins drupal verzeichnis wechseln
+			cd "$TMP_PATH" || exit 1
 			echo "----------------------"
 			echo 'Starting update for '"$drupal"'.'
 			echo "----------------------"
-			drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus setzen
-			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+			# Set maintenance mode
+			drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
+			# Clear the cache to make sure we are in maintenance
+			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
 			echo "----------------------"
 			echo 'Site(s) moved to maintenance mode.'
 			echo "----------------------"
@@ -116,60 +163,75 @@ elif [ -z "$2" ]; then
 			echo "----------------------"
 			# shellcheck disable=SC2034
 			i=1
+			# Create the DB backups
 			for db in "${datenbanken[@]}"
 				do
+				# Get that variable in the right form
 				db=${db#*\'}
 				db=${db#*\'}
 				db=${db#*\'}
 				db=${db%%\'*} # db name 
-				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > /root/drupal_update_db_back/"$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log # datenbank sichern
+				# Dump the database in in self contained file
+				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > /root/drupal_update_db_back/"$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log
 				# shellcheck disable=SC2181
-				if [ "$?" -eq 0 ]; then # fehlerfrei?
+				# If the command fails, we need to stop or we can harm our drupal permanently
+				if [ "$?" -eq 0 ]; then
 					echo "----------------------"
 					echo 'Database backup successfully created ('"$i"'/'"${#datenbanken[@]}"').'
 					echo "----------------------"
-				else # nein!
+				else
 					echo "----------------------"
 					echo 'Error while creating the database backup, please check the logfile "/var/log/drupal-mysql.log".'
 					echo "----------------------"
-					drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus entfernen
-					drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
-					exit 1 # script beenden
+					# Unset maintenance mode
+					drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+					# Clear the cache to make sure we are not in maintenance
+					drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+					# If you are here, please read the log, because there is something wrong
+					exit 1
 				fi
 				((i++))
 			done
 			echo "----------------------"
 			echo 'Starting update of drupal.'
 			echo "----------------------"
-			drush @sites up -y >> /dev/null 2>> /var/log/drupal-up.log # drupal update
+			# Do the drupal update
+			drush @sites up -y >> /dev/null 2>> /var/log/drupal-up.log
 			echo "----------------------"
 			echo 'Finishing update of drupal.'
 			echo "----------------------"
-			drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log # drupal updatedb
-			chown -R 33:33 "$TMP_PATH" # alles www-data geben
-			drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log # wartungsmodus entfernen
-			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+			# To be sure, do a DB update
+			drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log
+			# Set the correct owner (33=www-data)
+			chown -R 33:33 "$TMP_PATH"
+			# Unset maintenance mode
+			drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+			# Clear the cache to make sure we are not in maintenance
+			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
 			echo "----------------------"
 			echo 'Site(s) moved out of maintenance mode, please check the website(s).'
 			echo "----------------------"
 		done
-		date > /var/log/drupal-up-error.log # log leeren
-		grep error /var/log/drupal-up.log >> /var/log/drupal-up-error.log # nur fehler schreiben
+		# Clear error log from previous run
+		date >| /var/log/drupal-up-error.log
+		# Put all the errors from the log to the error log
+		grep error /var/log/drupal-up.log >> /var/log/drupal-up-error.log
+		# Count the lines in error log >1 = there are errors
 		LINECOUNT=$(wc -l /var/log/drupal-up-error.log) # fehler zählen
 		LINECOUNT=${LINECOUNT%% *}
-		if [ "$LINECOUNT" -gt 1 ]; then # mehr als 1 fehler?
+		if [ "$LINECOUNT" -gt 1 ]; then
 			echo "----------------------"
 			echo 'All updates finished.'
 			echo 'There are some errors, please check the logfile "/var/log/drupal-up-error.log"'
 			echo "----------------------"
-		else # nein!
+		else
 			echo "----------------------"
 			echo 'All updates finished.'
 			echo "----------------------"
 		fi
 	fi
+# Display usage if more than one parameter is given
 else
-    # display usage if wrong parameters given
-    echo "Usage: ./drupal-up.sh <folder or list>"
-    echo "Instead of a folder, you can provide a list with folder names"
+    echo "Usage: ./drupal-up.sh <foldername or file>"
+    echo "Instead of a foldername, you can provide a file with foldernames"
 fi
