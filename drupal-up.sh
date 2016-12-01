@@ -2,12 +2,12 @@
 ######################################################
 ###   Script for (semi)automatic Drupal Updates    ###
 ###      Author: https://github.com/fdellwing      ###
-###                Date: 26.07.2016                ###
+###                Date: 01.12.2016                ###
 ###        Contact: f.dellwing@netfutura.de        ###
 ######################################################
 
 ######################################################
-###   You max edit this values if they differ on   ###
+###   You may edit this values if they differ on   ###
 ###                  your system.                  ###
 ######################################################
 
