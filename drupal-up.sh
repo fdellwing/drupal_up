@@ -57,7 +57,7 @@ elif [ -z "$2" ]; then
 	# Run the routine for a single folder
 	if [ "$LIST" = false ]; then
 		# Get the databases from the drupal settings
-		IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" "$WWW_PATH""$1"/sites/*/settings.php ) )
+		IFS=$'\n' datenbanken=( $( grep -R -h -E "^[[:space:]]*'database' => '" "$WWW_PATH""$1"/sites/*/settings.php ) )
 		TMP_PATH="$WWW_PATH""$1"
 		cd "$TMP_PATH" || exit 1
 		echo "----------------------"
@@ -145,7 +145,7 @@ elif [ -z "$2" ]; then
 		for drupal in "${drupale[@]}"
 			do
 			# Get the databases from the drupal settings
-			IFS=$'\n' datenbanken=( $( grep -R -h "'database' => 'drupal_" /var/www/"$drupal"/sites/*/settings.php ) )
+			IFS=$'\n' datenbanken=( $( grep -R -h -E "^[[:space:]]*'database' => '" "$WWW_PATH""$drupal"/sites/*/settings.php ) )
 			TMP_PATH="$WWW_PATH""$drupal"
 			cd "$TMP_PATH" || exit 1
 			echo "----------------------"
