@@ -13,6 +13,7 @@
 
 # The root path for your drupal installations
 WWW_PATH="/var/www/"
+DB_BACKUP_PATH="/root/drupal_update_db_back/"
 
 # Your systems MYSQL user settings
 # If you do not use a debian based system,
@@ -34,6 +35,8 @@ if [ -z "$1" ]; then
     echo "Instead of a foldername, you can provide a file with foldernames"
 # Run the program if exactly one parameter is given
 elif [ -z "$2" ]; then
+	# Delete old db backups
+	find "$DB_BACKUP_PATH" -iname "*" -mtime +90 -delete
 	# Clear the logfiles from previous run
 	date >| /var/log/drupal-mysql.log
 	date >| /var/log/drupal-up.log
@@ -84,7 +87,7 @@ elif [ -z "$2" ]; then
 			db=${db#*\'}
 			db=${db%%\'*}
 			# Dump the database in in self contained file
-			mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > /root/drupal_update_db_back/"$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log # sql file erstellen
+			mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > "$DB_BACKUP_PATH""$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log # sql file erstellen
 			# shellcheck disable=SC2181
 			# If the command fails, we need to stop or we can harm our drupal permanently
 			if [ "$?" -eq 0 ]; then
@@ -172,7 +175,7 @@ elif [ -z "$2" ]; then
 				db=${db#*\'}
 				db=${db%%\'*} # db name 
 				# Dump the database in in self contained file
-				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > /root/drupal_update_db_back/"$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log
+				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > "$DB_BACKUP_PATH""$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log
 				# shellcheck disable=SC2181
 				# If the command fails, we need to stop or we can harm our drupal permanently
 				if [ "$?" -eq 0 ]; then
