@@ -9,9 +9,9 @@ This script is your easy way to do your drupal updates.
 Well, thats simple. With every update there is the chance that it will break your site. So you need to check the site after each and every update if everything works as intended.
 I personally run this script directly from console and check every site directly after the scripts says so. But you can also trigger this script via cron and check some time afterwards.
 
-**Thats the use of this script?**
+**What's the use of this script?**
 
-Well, thats also simple. To run updates on multiple installations you need a lot of time and nervs. Setting maintenance, getting a DB backup, etc. With this script, all that is done by a single command.
+Well, that's also simple. To run updates on multiple installations you need a lot of time and nervs. Setting maintenance, getting a DB backup, etc. With this script, all that is done by a single command.
 
 **Foldername or file?**
 

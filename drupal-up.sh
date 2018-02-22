@@ -63,13 +63,22 @@ elif [ -z "$2" ]; then
 		IFS=$'\n' datenbanken=( $( grep -R -h -E "^[[:space:]]*'database' => '" "$WWW_PATH""$1"/sites/*/settings.php ) )
 		TMP_PATH="$WWW_PATH""$1"
 		cd "$TMP_PATH" || exit 1
+		# Check for Drupal Version
+		D_VERSION=$(drush status | grep 'Drupal version' | sed 's/.*://' | tr -d ' ' | head -c 1)
 		echo "----------------------"
 		echo 'Starting update for '"$1"'.'
 		echo "----------------------"
-		# Set maintenance mode
-		drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
-		# Clear the cache to make sure we are in maintenance
-		drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+		if [ $D_VERSION -eq 7 ]; then
+			# Set maintenance mode
+			drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
+			# Clear the cache to make sure we are in maintenance
+			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+		else
+			# Set maintenance mode
+                        drush @sites sset system.maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        # Clear the cache to make sure we are in maintenance
+                        drush @sites cr -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+		fi
 		echo "----------------------"
 		echo 'Site(s) moved to maintenance mode.'
 		echo "----------------------"
@@ -98,10 +107,17 @@ elif [ -z "$2" ]; then
 				echo "----------------------"
 				echo 'Error while creating the database backup, please check the logfile "/var/log/drupal-mysql.log".'
 				echo "----------------------"
-				# Unset maintenance mode
-				drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
-				# Clear the cache to make sure we are not in maintenance
-				drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+                		if [ $D_VERSION -eq 7 ]; then
+                        		# Unset maintenance mode
+                        		drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        		# Clear the cache to make sure we are not in maintenance
+                        		drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                		else
+                        		# Unset maintenance mode
+                        		drush @sites sset system.maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        		# Clear the cache to make sure we are not in maintenance
+                        		drush @sites cr -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                		fi
 				# If you are here, please read the log, because there is something wrong
 				exit 1
 			fi
@@ -119,10 +135,17 @@ elif [ -z "$2" ]; then
 		drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log
 		# Set the correct owner (33=www-data)
 		chown -R 33:33 "$TMP_PATH"
-		# Unset maintenance mode
-		drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
-		# Clear the cache to make sure we are not in maintenance
-		drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+                if [ $D_VERSION -eq 7 ]; then   
+                	# Unset maintenance mode
+                	drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        # Clear the cache to make sure we are not in maintenance
+                        drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                else
+                        # Unset maintenance mode
+                        drush @sites sset system.maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        # Clear the cache to make sure we are not in maintenance
+                        drush @sites cr -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                fi
 		# Clear error log from previous run
 		date >| /var/log/drupal-up-error.log
 		# Put all the errors from the log to the error log
@@ -151,13 +174,21 @@ elif [ -z "$2" ]; then
 			IFS=$'\n' datenbanken=( $( grep -R -h -E "^[[:space:]]*'database' => '" "$WWW_PATH""$drupal"/sites/*/settings.php ) )
 			TMP_PATH="$WWW_PATH""$drupal"
 			cd "$TMP_PATH" || exit 1
+			D_VERSION=$(drush status | grep 'Drupal version' | sed 's/.*://' | tr -d ' ' | head -c 1)
 			echo "----------------------"
 			echo 'Starting update for '"$drupal"'.'
 			echo "----------------------"
-			# Set maintenance mode
-			drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
-			# Clear the cache to make sure we are in maintenance
-			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+                	if [ $D_VERSION -eq 7 ]; then 
+                        	# Set maintenance mode
+                        	drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        	# Clear the cache to make sure we are in maintenance
+                        	drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                	else
+                        	# Set maintenance mode
+                        	drush @sites sset system.maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        	# Clear the cache to make sure we are in maintenance
+                        	drush @sites cr -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                	fi
 			echo "----------------------"
 			echo 'Site(s) moved to maintenance mode.'
 			echo "----------------------"
@@ -186,10 +217,17 @@ elif [ -z "$2" ]; then
 					echo "----------------------"
 					echo 'Error while creating the database backup, please check the logfile "/var/log/drupal-mysql.log".'
 					echo "----------------------"
-					# Unset maintenance mode
-					drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
-					# Clear the cache to make sure we are not in maintenance
-					drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+					if [ $D_VERSION -eq 7 ]; then   
+                  			      	# Unset maintenance mode
+                        			drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        			# Clear the cache to make sure we are not in maintenance
+                        			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                			else
+                        			# Unset maintenance mode
+                        			drush @sites sset system.maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        			# Clear the cache to make sure we are not in maintenance
+                        			drush @sites cr -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                			fi
 					# If you are here, please read the log, because there is something wrong
 					exit 1
 				fi
@@ -207,10 +245,17 @@ elif [ -z "$2" ]; then
 			drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log
 			# Set the correct owner (33=www-data)
 			chown -R 33:33 "$TMP_PATH"
-			# Unset maintenance mode
-			drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
-			# Clear the cache to make sure we are not in maintenance
-			drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log
+			if [ $D_VERSION -eq 7 ]; then   
+                        	# Unset maintenance mode
+                        	drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        	# Clear the cache to make sure we are not in maintenance
+                        	drush @sites cc all -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                	else
+                        	# Unset maintenance mode
+                        	drush @sites sset system.maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
+                        	# Clear the cache to make sure we are not in maintenance
+                        	drush @sites cr -y >> /dev/null 2>> /var/log/drupal-up.log # cache clearen
+                	fi
 			echo "----------------------"
 			echo 'Site(s) moved out of maintenance mode, please check the website(s).'
 			echo "----------------------"
