@@ -18,10 +18,10 @@ DB_BACKUP_PATH="/root/drupal_update_db_back/"
 # Your systems MYSQL user settings
 # If you do not use a debian based system,
 # the file has to look like this:
-# [client]                                                                                                                                                                                                                                     
-# host     = localhost                                                                                                                                                                                                                         
-# user     = debian-sys-maint                                                                                                                                                                                                                  
-# password = passphrase                                                                                                                                                                                                                  
+# [client]
+# host     = localhost
+# user     = debian-sys-maint
+# password = passphrase
 # socket   = /var/run/mysqld/mysqld.sock
 CONF="/etc/mysql/debian.cnf"
 
@@ -68,7 +68,7 @@ elif [ -z "$2" ]; then
 		echo "----------------------"
 		echo 'Starting update for '"$1"'.'
 		echo "----------------------"
-		if [ $D_VERSION -eq 7 ]; then
+		if [ "$D_VERSION" -eq 7 ]; then
 			# Set maintenance mode
 			drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
 			# Clear the cache to make sure we are in maintenance
@@ -107,7 +107,7 @@ elif [ -z "$2" ]; then
 				echo "----------------------"
 				echo 'Error while creating the database backup, please check the logfile "/var/log/drupal-mysql.log".'
 				echo "----------------------"
-                		if [ $D_VERSION -eq 7 ]; then
+                		if [ "$D_VERSION" -eq 7 ]; then
                         		# Unset maintenance mode
                         		drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
                         		# Clear the cache to make sure we are not in maintenance
@@ -135,7 +135,7 @@ elif [ -z "$2" ]; then
 		drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log
 		# Set the correct owner (33=www-data)
 		chown -R 33:33 "$TMP_PATH"
-                if [ $D_VERSION -eq 7 ]; then   
+                if [ "$D_VERSION" -eq 7 ]; then
                 	# Unset maintenance mode
                 	drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
                         # Clear the cache to make sure we are not in maintenance
@@ -178,7 +178,7 @@ elif [ -z "$2" ]; then
 			echo "----------------------"
 			echo 'Starting update for '"$drupal"'.'
 			echo "----------------------"
-                	if [ $D_VERSION -eq 7 ]; then 
+                	if [ "$D_VERSION" -eq 7 ]; then
                         	# Set maintenance mode
                         	drush @sites vset maintenance_mode 1 -y >> /dev/null 2>> /var/log/drupal-up.log
                         	# Clear the cache to make sure we are in maintenance
@@ -204,7 +204,7 @@ elif [ -z "$2" ]; then
 				db=${db#*\'}
 				db=${db#*\'}
 				db=${db#*\'}
-				db=${db%%\'*} # db name 
+				db=${db%%\'*} # db name
 				# Dump the database in in self contained file
 				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > "$DB_BACKUP_PATH""$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log
 				# shellcheck disable=SC2181
@@ -217,7 +217,7 @@ elif [ -z "$2" ]; then
 					echo "----------------------"
 					echo 'Error while creating the database backup, please check the logfile "/var/log/drupal-mysql.log".'
 					echo "----------------------"
-					if [ $D_VERSION -eq 7 ]; then   
+					if [ "$D_VERSION" -eq 7 ]; then
                   			      	# Unset maintenance mode
                         			drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
                         			# Clear the cache to make sure we are not in maintenance
@@ -245,7 +245,7 @@ elif [ -z "$2" ]; then
 			drush @sites updatedb -y >> /dev/null 2>> /var/log/drupal-up.log
 			# Set the correct owner (33=www-data)
 			chown -R 33:33 "$TMP_PATH"
-			if [ $D_VERSION -eq 7 ]; then   
+			if [ "$D_VERSION" -eq 7 ]; then
                         	# Unset maintenance mode
                         	drush @sites vset maintenance_mode 0 -y >> /dev/null 2>> /var/log/drupal-up.log
                         	# Clear the cache to make sure we are not in maintenance
