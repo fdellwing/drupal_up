@@ -96,7 +96,7 @@ elif [ -z "$2" ]; then
 			db=${db#*\'}
 			db=${db%%\'*}
 			# Dump the database in in self contained file
-			mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > "$DB_BACKUP_PATH""$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log # sql file erstellen
+			mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" | gzip > "$DB_BACKUP_PATH""$db""_""$(date +'%Y_%m_%d')".sql.gz 2>> /var/log/drupal-mysql.log # sql file erstellen
 			# shellcheck disable=SC2181
 			# If the command fails, we need to stop or we can harm our drupal permanently
 			if [ "$?" -eq 0 ]; then
@@ -127,6 +127,7 @@ elif [ -z "$2" ]; then
 		echo 'Starting update of drupal.'
 		echo "----------------------"
 		# Do the drupal update
+		drush @sites rf -y >> /dev/null 2>> /var/log/drupal-up.log
 		drush @sites up -y >> /dev/null 2>> /var/log/drupal-up.log
 		echo "----------------------"
 		echo 'Finishing update of drupal.'
@@ -206,7 +207,7 @@ elif [ -z "$2" ]; then
 				db=${db#*\'}
 				db=${db%%\'*} # db name
 				# Dump the database in in self contained file
-				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" > "$DB_BACKUP_PATH""$db""_""$(date +'%Y_%m_%d')".sql 2>> /var/log/drupal-mysql.log
+				mysqldump --defaults-extra-file="$CONF" --add-drop-table "$db" | gzip > "$DB_BACKUP_PATH""$db""_""$(date +'%Y_%m_%d')".sql.gz 2>> /var/log/drupal-mysql.log
 				# shellcheck disable=SC2181
 				# If the command fails, we need to stop or we can harm our drupal permanently
 				if [ "$?" -eq 0 ]; then
@@ -237,6 +238,7 @@ elif [ -z "$2" ]; then
 			echo 'Starting update of drupal.'
 			echo "----------------------"
 			# Do the drupal update
+			drush @sites rf -y >> /dev/null 2>> /var/log/drupal-up.log
 			drush @sites up -y >> /dev/null 2>> /var/log/drupal-up.log
 			echo "----------------------"
 			echo 'Finishing update of drupal.'
