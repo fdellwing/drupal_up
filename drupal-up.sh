@@ -36,7 +36,7 @@ if [ -z "$1" ]; then
 # Run the program if exactly one parameter is given
 elif [ -z "$2" ]; then
 	# Delete old db backups
-	find "$DB_BACKUP_PATH" -iname "*" -mtime +90 -delete
+	find "$DB_BACKUP_PATH" -iname "*" -mtime +90 -delete 2> /dev/null || mkdir -p "$DB_BACKUP_PATH"
 	# Clear the logfiles from previous run
 	date >| /var/log/drupal-mysql.log
 	date >| /var/log/drupal-up.log
@@ -64,7 +64,7 @@ elif [ -z "$2" ]; then
 		TMP_PATH="$WWW_PATH""$1"
 		cd "$TMP_PATH" || exit 1
 		# Check for Drupal Version
-		D_VERSION=$(drush status | grep 'Drupal version' | sed 's/.*://' | tr -d ' ' | head -c 1)
+		D_VERSION=$(drush @sites status -y --format=json 2> /dev/null | grep 'drupal-version' | grep -Eo '[0-9]+\.' | head -c 1)
 		echo "----------------------"
 		echo 'Starting update for '"$1"'.'
 		echo "----------------------"
@@ -175,7 +175,7 @@ elif [ -z "$2" ]; then
 			IFS=$'\n' datenbanken=( $( grep -R -h -E "^[[:space:]]*'database' => '" "$WWW_PATH""$drupal"/sites/*/settings.php ) )
 			TMP_PATH="$WWW_PATH""$drupal"
 			cd "$TMP_PATH" || exit 1
-			D_VERSION=$(drush status | grep 'Drupal version' | sed 's/.*://' | tr -d ' ' | head -c 1)
+			D_VERSION=$(drush @sites status -y --format=json 2> /dev/null | grep 'drupal-version' | grep -Eo '[0-9]+\.' | head -c 1)
 			echo "----------------------"
 			echo 'Starting update for '"$drupal"'.'
 			echo "----------------------"
